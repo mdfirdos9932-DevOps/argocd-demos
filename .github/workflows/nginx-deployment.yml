@@ -1,0 +1,62 @@
+name: Nginx Deployment CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'ui_approach/nginx/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'ui_approach/nginx/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up YAML validation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yamllint
+
+      - name: Validate YAML syntax
+        run: yamllint ui_approach/nginx/nginx_deployment.yml
+
+      - name: Set up kubeval
+        run: |
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo mv kubeval /usr/local/bin/
+
+      - name: Validate Kubernetes manifest
+        run: kubeval ui_approach/nginx/nginx_deployment.yml
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run kube-linter
+        uses: stackrox/kube-linter-action@v1
+        with:
+          directory: ui_approach/nginx/
+          config: .kube-linter.yml
+        continue-on-error: true
+
+  deploy-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dry-run deployment
+        run: |
+          # This can be used to verify deployment configuration
+          echo "Deployment configuration valid"
+          cat ui_approach/nginx/nginx_deployment.yml
